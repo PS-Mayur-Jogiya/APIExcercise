@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.IO;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
@@ -136,13 +137,36 @@ app.MapPatch("/orders/{id}", (int id, [FromBody] Order updatedOrder) =>
 
         var updatedJson = JsonSerializer.Serialize(ordersList);
         File.WriteAllText("orders.json", updatedJson);
-        return Results.Ok(orderToUpdate);  
+        return Results.Ok(orderToUpdate);
     }
     else
     {
         return Results.NotFound($"Order {id} not found");
     }
 });
+
+app.MapPut("/updateName/{id}", (int id, [FromBody] Order updatedOrder) =>
+{
+    var jsonData = File.ReadAllText("orders.json");
+    var ordersList = JsonSerializer.Deserialize<List<Order>>(jsonData);
+    var orderToUpdate = ordersList.FirstOrDefault(o => o.Id == id);
+    if (orderToUpdate != null)
+    {
+        if (!string.IsNullOrEmpty(updatedOrder.CustomerName))
+        {
+            orderToUpdate.CustomerName = updatedOrder.CustomerName;
+        }
+
+        var updatedJson = JsonSerializer.Serialize(ordersList);
+        File.WriteAllText("orders.json", updatedJson);
+        return Results.Ok(orderToUpdate);
+    }
+    else
+    {
+        return Results.NotFound($"Order {id} not found");
+    }
+});
+
 
 app.Run();
 
