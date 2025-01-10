@@ -5,6 +5,10 @@ using System.Text.Json.Serialization;
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
+var orders_jsonData = File.ReadAllText("orders.json");
+var ordersList = JsonSerializer.Deserialize<List<Order>>(orders_jsonData);
+
+
 string jsonData = @"
 [
   {
@@ -97,6 +101,49 @@ app.MapPost("/addProduct", (Inventory item) =>
     return Results.Ok(item);
 });
 
+
+app.MapDelete("/orders/{id}", (int id) =>
+{
+    var orderToDelete = ordersList.FirstOrDefault(o => o.Id == id);
+    if (orderToDelete != null)
+    {
+        ordersList.Remove(orderToDelete);
+        var updatedJson = JsonSerializer.Serialize(ordersList);
+        File.WriteAllText("orders.json", updatedJson);
+        return Results.Ok($"Order {id} deleted successfully");
+    }
+    else
+    {
+        return Results.NotFound($"Order {id} not found");
+    }
+});
+
+app.MapPatch("/orders/{id}", (int id, [FromBody] Order updatedOrder) =>
+{
+    var orders_jsonData = File.ReadAllText("orders.json");
+    var ordersList = JsonSerializer.Deserialize<List<Order>>(orders_jsonData);
+    var orderToUpdate = ordersList.FirstOrDefault(o => o.Id == id);
+    if (orderToUpdate != null)
+    {
+        if (!string.IsNullOrEmpty(updatedOrder.CustomerName))
+        {
+            orderToUpdate.CustomerName = updatedOrder.CustomerName;
+        }
+        if (!string.IsNullOrEmpty(updatedOrder.OrderDate))
+        {
+            orderToUpdate.OrderDate = updatedOrder.OrderDate;
+        }
+
+        var updatedJson = JsonSerializer.Serialize(ordersList);
+        File.WriteAllText("orders.json", updatedJson);
+        return Results.Ok(orderToUpdate);  
+    }
+    else
+    {
+        return Results.NotFound($"Order {id} not found");
+    }
+});
+
 app.Run();
 
 public class Inventory
@@ -131,4 +178,11 @@ public class Contact
 
     [JsonPropertyName("phone")]
     public string Phone { get; set; }
+}
+
+public class Order
+{
+    public int Id { get; set; }
+    public string CustomerName { get; set; }
+    public string OrderDate { get; set; }
 }
